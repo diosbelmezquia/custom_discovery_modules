@@ -1,0 +1,9 @@
+name: 'Discovery adjustments'
+description: General adjustments for Disocvery project
+package: Discovery
+
+type: module
+core: '8.x'
+
+dependencies:
+  - drupal:diff

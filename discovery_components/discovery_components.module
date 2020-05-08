@@ -1,0 +1,241 @@
+<?php
+
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\node\Entity\Node;
+use Drupal\Component\Serialization\Json;
+
+/*
+ * Implements hook_form_BASE_FORM_ID_alter().
+ */
+function discovery_components_form_node_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  $form['#attached']['library'][] = 'discovery_components/discovery.component.behaviors';
+
+  $current_node = $form_state->getFormObject()->getEntity();
+
+  // @TODO Review if this options states can be used for other content too.
+  if ($current_node->getType() == 'home') {
+    $form['button_more_options'] = [
+      'type' => 'item',
+      '#markup' => '<a href="#" id="more_options">More options</a>'
+    ];
+    $form['field_slider_component']['#states'] = [
+      'visible' => [
+        ':input[name="field_opening_type_component"]' => ['value' => 'slider'],
+      ],
+    ];
+    $form['field_live_streaming_component']['#states'] = [
+      'visible' => [
+        ':input[name="field_opening_type_component"]' => ['value' => 'live_stream'],
+      ],
+    ];
+    $form['field_panoramic_component']['#states'] = [
+      'visible' => [
+        ':input[name="field_opening_type_component"]' => ['value' => 'panoramic'],
+      ],
+    ];
+    return;
+  }
+}
+
+/**
+ * Implements hook_field_widget_WIDGET_TYPE_form_alter().
+ *
+ * Alter the components/paragraphs widget.
+ */
+function discovery_components_field_widget_paragraphs_classic_asymmetric_form_alter(&$element, FormStateInterface $form_state, $context) {
+  $plugin_id = $element['#paragraph_type'];
+  if (preg_match('/field-slider-component/', $element['#prefix']) && $plugin_id == 'carousel') {
+    $element['subform']['field_cross_content']['#states'] = [
+      'visible' => [
+        ':input[name="field_slider_component[0][subform][field_display_options]"]' => ['value' => 'carousel'],
+      ],
+    ];
+    $element['subform']['field_ad_location']['#states'] = $element['subform']['field_insert_ad']['#states'] = $element['subform']['field_full_width']['#states'] = [
+      'visible' => [
+        ':input[name="field_slider_component[0][subform][field_display_options]"]' => ['value' => 'slider'],
+      ],
+    ];
+    return;
+  }
+  // @Review this component better. its not working.
+/*  if (preg_match('/field-live-streaming-component/', $element['#prefix']) && $plugin_id == 'live_streaming') {
+    $element['subform']['field_imagen']['#states'] = [
+      'visible' => [
+        ':input[name=field_live_streaming_component[0][subform][field_background]"]' => ['value' => 'image'],
+      ],
+    ];
+    $element['subform']['field_background_color']['#states'] = $element['subform']['field_opacity']['#states'] = [
+      'visible' => [
+        ':input[name=field_live_streaming_component[0][subform][field_background]"]' => ['value' => 'color'],
+      ],
+    ];
+    $element['subform']['field_background_gradient']['#states'] = [
+      'visible' => [
+        ':input[name=field_live_streaming_component[0][subform][field_background]"]' => ['value' => 'gradient'],
+      ],
+    ];
+    return;
+  }*/
+}
+
+/**
+ * Implements hook_field_widget_form_alter().
+ *
+ * Alter the components/paragraphs widget.
+ */
+function discovery_components_field_widget_form_alter(&$element, FormStateInterface $form_state, $context) {
+  // If is set the paragraph_type field.
+  if (isset($element['#paragraph_type'])) {
+    $plugin_id = $element['#paragraph_type'];
+    // Get the component plugin manager.
+    $component_manager = \Drupal::service('plugin.manager.component');
+    // Check if this paragraph type is defiend as component.
+    if ($component_manager->hasDefinition($plugin_id)) {
+      // State for components.
+      discovery_components_component_states($element, $plugin_id);
+      // Get preview link for each component/paragraph.
+      $component_manager->getPreviewLink($element, $plugin_id);
+      // Get the definitions/annotation fields.
+      // @TODO $component_manager->applyStyles($plugin_id, $element);
+      $plugin_definition = $component_manager->getDefinition($plugin_id);
+      // Set the background color defiend in the plugin for current paragraph.
+      if (isset($plugin_definition['background_color'])) {
+        // Attach library for apply new css and js.
+        $element['#attached']['library'][] = 'discovery_components/drupal.paragraphs.widget';
+        //@TODO This can be improved using separate sass/css or js.
+        $color   = "background-color: " . $plugin_definition['background_color']  .";";
+        $padding = 'padding: 3%;';
+        $element['#attributes']['style'] = $color . $padding;
+      }
+    }
+  }
+}
+
+// State for components.
+function discovery_components_component_states(&$element, $plugin_id) {
+  if ($plugin_id == 'video_inline') {
+    $delta = $element['#delta'];
+    $element['subform']['field_imagen']['#states'] = [
+      'visible' => [
+        ':input[name="field_components['. $delta . '][subform][field_background]"]' => ['value' => 'image'],
+      ],
+    ];
+    $element['subform']['field_background_color']['#states'] = $element['subform']['field_opacity']['#states'] = [
+      'visible' => [
+        ':input[name="field_components[' . $delta . '][subform][field_background]"]' => ['value' => 'color'],
+      ],
+    ];
+    $element['subform']['field_background_gradient']['#states'] = [
+      'visible' => [
+        ':input[name="field_components[' . $delta . '][subform][field_background]"]' => ['value' => 'gradient'],
+      ],
+    ];
+    return;
+  }
+  if ($plugin_id == 'graphic_opening') {
+    $delta = $element['#delta'];
+    $element['subform']['field_graphic_title']['#states'] = [
+      'visible' => [
+        ':input[name="field_graphic_opening['. $delta . '][subform][field_title_type]"]' => ['value' => 'graphic'],
+      ],
+    ];
+    $element['subform']['field_text_title']['#states'] = $element['subform']['field_opacity']['#states'] = [
+      'visible' => [
+        ':input[name="field_graphic_opening['. $delta . '][subform][field_title_type]"]' => ['value' => 'text'],
+      ],
+    ];
+    return;
+  }
+  if ($plugin_id == 'carousel') {
+    $delta = $element['#delta'];
+    $element['subform']['field_cross_content']['#states'] = [
+      'visible' => [
+        ':input[name="field_components['. $delta . '][subform][field_display_options]"]' => ['value' => 'carousel'],
+      ],
+    ];
+    $element['subform']['field_ad_location']['#states'] = $element['subform']['field_insert_ad']['#states'] = $element['subform']['field_full_width']['#states'] = [
+      'visible' => [
+        ':input[name="field_components['. $delta . '][subform][field_display_options]"]' => ['value' => 'slider'],
+      ],
+    ];
+    return;
+  }
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for field_multiple_value_form().
+ *
+ * Change the table widget for autocomplete, to fix the bug y reordering the
+ * table of entity_browser module.
+ */
+function discovery_components_preprocess_field_multiple_value_form(&$variables) {
+  // Apply autocomplete for this fields.
+  $old_components = ['field_content_special', 'field_carousel_scheduled_content', 'field_carousel_content', 'field_panoramic_opening', 'field_populares', 'field_cross_content', 'field_destacados', 'field_recomendados', 'field_related_shows', 'field_videos', 'field_related_galleries', 'field_contenido_relacionado'];
+  // Field condition.
+  if (in_array($variables['element']['#field_name'], $old_components)) {
+    // Set Table Header.
+    array_push($variables['table']['#header'], t('Status'), t('Content type'), t('Region'), '');
+
+    foreach ($variables['element'] as $delta => $element) {
+      if (preg_match('/^[0-9]/', $delta)) {
+        // Get Current Node.
+        $node_title = $element['target_id']['#value'];
+        $autocomplete = $element['target_id']['#type'] == 'entity_autocomplete';
+        // Get nid from string title. Example -> (1548).
+        preg_match_all('/\([0-9]*?\)/', $node_title, $result);
+        if (isset($result[0]) && isset($result[0][0]) && $autocomplete) {
+          // Get nid, just the number.
+          $nid = substr($result[0][0], 1, -1);
+          // Load current node to get properties.
+          $node = Node::load($nid);
+          if ($node) {
+            // Get regions for current content.
+            $regiones = '';
+            $regiones_array = [];
+            if (is_null($node->field_region_term)) {
+              $regiones = t('All');
+            }
+            else {
+              foreach ($node->field_region_term as $region) {
+                $regiones_array[] = $region->entity->name->value;
+              }
+              $regiones = implode(',', $regiones_array);
+            }
+
+            // Render array markup for node url.
+            $link_edit['link_edit'] = [
+              '#title' => 'Edit',
+              '#type' => 'link',
+              '#url' => \Drupal\Core\Url::fromRoute('entity.node.edit_form', ['node' => $node->id()], ['absolute' => TRUE]),
+              '#attributes' => [
+                'target' => '_blank',
+                'class' => ['node-edit'],
+              ],
+            ];
+
+            $state = (boolean) $node->status->value == TRUE ? t('Published') : t('No Published');
+            $status['status'] = [
+              '#type' => 'item',
+              '#markup' => '<span class="node-status">' . $state . '</span>',
+            ];
+            $type['type'] = [
+              '#type' => 'item',
+              '#markup' => '<span class="node-type">' . $node->getType() . '</span>',
+            ];
+            $regions['region'] = [
+              '#type' => 'item',
+              '#markup' => '<span class="node-region">' . $regiones . '</span>',
+            ];
+
+            // Add another fields for the result.
+            array_push($variables['table']['#rows'][$delta]['data'],
+              ['data' => $status],
+              ['data' => $type],
+              ['data' => $regions],
+              ['data' => $link_edit]);
+          }
+        }
+      }
+    }
+  }
+}

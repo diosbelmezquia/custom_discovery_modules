@@ -1,0 +1,14 @@
+drupal.paragraphs.widget:
+  css:
+    theme:
+      css/paragraphs.widget.css: {}
+
+discovery.component.behaviors:
+  js:
+    js/component_behaviors.js: {}
+  css:
+    theme:
+      css/general.adjustments.css: {}
+  dependencies:
+    - core/jquery
+    - core/drupal

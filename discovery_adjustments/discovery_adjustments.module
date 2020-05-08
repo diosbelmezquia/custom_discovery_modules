@@ -1,0 +1,307 @@
+<?php
+
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\taxonomy\Entity\Term;
+use Drupal\discovery_adjustments\Utility\DiscoveryHelper;
+use Drupal\Core\Datetime\DrupalDateTime;
+use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Field\BaseFieldDefinition;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\views\Plugin\views\query\QueryPluginBase;
+use Drupal\views\ViewExecutable;
+use Drupal\views\Plugin\views\query\Sql;
+use Drupal\datetime\Plugin\Field\FieldType\DateTimeItemInterface;
+use Drupal\node\Entity\Node;
+
+/*
+ * Implements hook_form_alter().
+ */
+function discovery_adjustments_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  // Show content by language in the entity_browser views.
+  if (preg_match('/^views-exposed-form/', $form['#id']) && isset($form['content_langcode'])) {
+    // This parameter arrives from the configuration in javascript.
+    // @See Drupal/discovery_components/js/component_behaviors.js
+    $content_langcode = \Drupal::request()->query->get('content_langcode');
+    // Hide the langcode field in the view for all users, NOT FOR DRUPAL ADMIN.
+    $form['content_langcode']['#access'] = \Drupal::currentUser()->id() == 1;
+    if (isset($content_langcode) && isset($form['content_langcode']['#options'][$content_langcode])) {
+      \Drupal::messenger()->addWarning(t('The data is displayed depending on the current language of the content.'));
+      $form['content_langcode']['#value'] = $content_langcode;
+    }
+    return;
+  }
+}
+
+/*
+ * Implements hook_form_BASE_FORM_ID_alter().
+ */
+function discovery_adjustments_form_node_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  // Get current node.
+  $current_node = $form_state->getFormObject()->getEntity();
+
+  $form['#attached']['library'][] = 'discovery_adjustments/discovery_modal';
+
+  // Allow write more than 255 characters in SEO field.
+  if (isset($form['field_seo'])) {
+    $form['field_seo']['widget'][0]['basic']['keywords']['#maxlength'] = 500000;
+  }
+
+  // Add region by default con create or edit a gallery node.
+  if ($current_node->getType() == 'galeria_de_imagenes') {
+    $form['#attached']['library'][] = 'discovery_adjustments/gallery_region';
+    return;
+  }
+
+  if (preg_match('/^node_video(_form|_edit_form)/', $form_id)) {
+    // Disable field (read only).
+    $form['field_remaining_time']['#disabled'] = TRUE;
+    // Update remaining time in CMS.
+    discovery_adjustments_check_remaining_time($current_node);
+    $form['field_remaining_time']['widget'][0]['value']['#default_value'] = $current_node->field_remaining_time->value;
+    return;
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function discovery_adjustments_form_views_exposed_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  if (isset($form['#id']) && preg_match('/^views-exposed-form-videos-(page-3|page-4|data-export-2)/', $form['#id'])) {
+    // Show months.
+    $months = [0 => '- All -'];
+    $months += DiscoveryHelper::monthNamesTranslated();
+    $form['month'] = [
+      '#title' => new TranslatableMarkup('Published in'),
+      '#type' => 'select',
+      '#options' => $months,
+      '#size' => NULL,
+      '#default_value' => 0,
+    ];
+    // Show channels.
+    $channels = ['' => '- All -'];
+    $channels += DiscoveryHelper::getChannels();
+    $form['channel'] = [
+      '#type' => 'select',
+      '#options' => $channels,
+      '#size' => NULL,
+      '#default_value' => '',
+    ];
+  }
+}
+
+/**
+ * Implements hook_views_query_alter().
+ */
+function discovery_adjustments_views_query_alter(ViewExecutable $view, QueryPluginBase $query) {
+  if ($query instanceof Sql && $view->id() === 'videos' &&
+    preg_match('/^(page_3|page_4|data_export_2)/', $view->current_display)) {
+    foreach ($query->where as $index => &$condition_group) {
+      foreach ($condition_group['conditions'] as &$condition) {
+        // Unset condition whether value is 0, for list all result and desable
+        // this filter.
+        if (isset($condition['value'][':node_field_data_created_month']) &&
+          $condition['value'][':node_field_data_created_month'] == 0) {
+          unset($query->where[$index]);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Check if the requirements for the remaining time are met.
+ *
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ *   The $entity object.
+ */
+function discovery_adjustments_check_remaining_time(EntityInterface &$entity) {
+  $pre_premiere = [
+    'Episodio estreno',
+    'Episódio de estreia',
+    'Primer episodio',
+    'Primeiro episódio'
+  ];
+  $is_pre_premiere = FALSE;
+
+  // Get Labels taxonomy term.
+  if (!is_null($entity->field_label_new->entity)) {
+    $term = $entity->field_label_new->entity;
+    if ($term) {
+      $label = $term->getName();
+      // Check if it's Pre-release video.
+      $is_pre_premiere = in_array($label, $pre_premiere);
+    }
+
+    // Check is expire time is defiend.
+    $expire_time = $entity->field_ts_expire->value;
+
+    if ($is_pre_premiere && $expire_time) {
+      $date_format = DateTimeItemInterface::DATETIME_STORAGE_FORMAT;
+      // Get current datetime drupal server.
+      $current_date = DiscoveryHelper::getCurrentServerDate($date_format);
+      // Get next month datetime.
+      $server_timezone = DiscoveryHelper::getServerTimezone();
+      $now = new DrupalDateTime('now', $server_timezone);
+      $next_month = $now->modify('+31 days')->format($date_format);
+      // Check dates.
+      if ($expire_time >= $current_date && $expire_time <= $next_month) {
+        // Get current remaining expires time.
+        $time_expires = new DrupalDateTime($expire_time, $server_timezone);
+        $remaining_time = DiscoveryHelper::getRemainingTime($time_expires);
+        // Set remaining time in the field field_remaining_time.
+        if ($remaining_time == 'today') {
+          $entity->field_remaining_time->value = t('Expire today');
+          return;
+        }
+        else {
+          $entity->field_remaining_time->value = t('Expire in @day', ['@day' => $remaining_time]);
+          return;
+        }
+      }
+    }
+  }
+  // Set Undefined by default.
+  // Undefined text does not need translate.
+  $entity->field_remaining_time->value = 'undefined';
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_insert() for node entities.
+ */
+function discovery_adjustments_node_insert(EntityInterface $node) {
+  // Get large node url.
+  $url_long = DiscoveryHelper::getProductionLongUrl($node);
+  // Convert long url to short url.
+  if ($url_long) {
+    $url_short = DiscoveryHelper::getShortLink($url_long);
+    if (isset($url_short)) {
+      // Let update node post save.
+      drupal_register_shutdown_function('_discovery_adjustments_post_insert', $node, $url_short);
+    }
+  }
+}
+
+// Let update node post insert.
+function _discovery_adjustments_post_insert(EntityInterface $node, $url_short) {
+  if ($node && isset($node->url_shorter)) {
+    // Set the property short_url for the current node.
+    $node->url_shorter->value = $url_short;
+    $node->save();
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_presave() for node entities.
+ */
+function discovery_adjustments_node_presave(EntityInterface $node) {
+ /* if (!$node->isNew()) {
+    // Get large node url.
+    $url_long = DiscoveryHelper::getProductionLongUrl($node);
+    // Convert long url to short url.
+    if ($url_long) {
+      $url_short = DiscoveryHelper::getShortLink($url_long);
+      // Set the property short_url for the current node.
+      $node->url_shorter->value = $url_short;
+    }
+  }*/
+}
+
+/**
+ * Implements hook_entity_base_field_info().
+ */
+function discovery_adjustments_entity_base_field_info(EntityTypeInterface $entity_type) {
+  if (in_array($entity_type->id(), ['node'])) {
+    // Add a field for storage the url shorter in nodes.
+    $fields['url_shorter'] = BaseFieldDefinition::create('string')
+      ->setLabel(t('URL Shorter'))
+      ->setRequired(FALSE)
+      ->setReadOnly(TRUE);
+
+    return $fields;
+  }
+}
+
+/**
+ * Implements hook_cron().
+ */
+function discovery_adjustments_cron() {
+  // Remove Label from videos if there is a defined date for deletion.
+  \Drupal::service('discovery_adjustments.video_manager')->removeLabel();
+}
+
+/**
+ * Implements hook_entity_type_alter().
+ */
+function discovery_adjustments_entity_type_alter(array &$entity_types) {
+  // Add validation constraint to the node entity.
+  $entity_types['node']->addConstraint('discovery_constraint');
+  $entity_types['media']->addConstraint('discovery_constraint');
+}
+
+/**
+ * Implements hook_preprocess_views_view_field().
+ */
+function discovery_adjustments_preprocess_views_view_field(&$variables) {
+  $view = $variables['view'];
+  $field = $variables['field'];
+  // adjustments for /admin/content view in the title field.
+  if ($view->storage->id() == 'content' && $view->current_display == 'page_1' && $field->field == 'title') {
+    // Get content language.
+    $langcode = $variables['row']->node_field_data_langcode;
+    // Get content title.
+    $title = 'No title found for this translation.';
+    $content = $variables['row']->_entity;
+    if ($content->hasTranslation($langcode)) {
+      $content = $content->getTranslation($langcode);
+      // Get content title.
+      $title = $content->title->value;
+    }
+    elseif ($content->language()->getId() == $langcode) {
+      // Get content title.
+      $title = $content->title->value;
+    }
+    // Get the domain of current url.
+    $domain = \Drupal::request()->getHost();
+    // Get the url by language.
+    $nid = $variables['row']->_entity->id();
+    $alias_url = \Drupal::service('path.alias_manager')->getAliasByPath('/node/'. $nid, $langcode);
+    // PRE-PROD
+    if (preg_match("/preprod-back.admin-tudiscovery/", $domain)) {
+      $base_url = 'https://latam-preprod.admin-tudiscovery.com';
+      if ($langcode == 'pt-br') {
+        $base_url = 'https://brasil-preprod.admin-tudiscovery.com';
+      }
+    }
+    // PROD
+    elseif (preg_match("/cms.admin-tudiscovery/", $domain)) {
+      $base_url = 'https://www.tudiscovery.com';
+      if ($langcode == 'pt-br') {
+        $base_url = 'https://www.discoverybrasil.com';
+      }
+    }
+    // DEV
+    else {
+      $base_url = 'https://latam-dev.admin-tudiscovery.com';
+      if ($langcode == 'pt-br') {
+        $base_url = 'https://brasil-dev.admin-tudiscovery.com';
+      }
+    }
+    // Get full url by language.
+    $alias_url = $alias_url == '/home' ? '' : $alias_url;
+    $url = $base_url . $alias_url;
+    // Get the final url for content title.
+    $variables['output'] = \Drupal\Core\Render\Markup::create("<a href='$url' target='_blank'>$title</a>");
+    // Remove link for node without alias.
+    if (preg_match('/^\/node\/[0-9]*$/', $alias_url)) {
+      $variables['output'] = $title;
+    }
+  }
+}
+
+/**
+ * Implements hook_page_attachments().
+ */
+function discovery_adjustments_page_attachments(array &$attachments) {
+
+}

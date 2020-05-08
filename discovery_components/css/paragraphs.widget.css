@@ -1,0 +1,17 @@
+.paragraph-type-title,
+.paragraph-type-label {
+  font-size: 1.5em;
+  font-weight: bold;
+  flex-basis: 80% !important;
+}
+
+.img_popop {
+  max-width: 100%;
+  display: none;
+}
+
+/* Background color for slider in video inline component. */
+.field--name-field-slider-bg-color {
+  background-color: #00bcd43d;
+  padding: 1%;
+}

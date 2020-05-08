@@ -1,0 +1,4 @@
+discovery_adjustments.node.diff:
+  route_name: discovery_adjustments.node.diff
+  base_route: entity.node.canonical
+  title: 'Changes'

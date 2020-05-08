@@ -1,0 +1,4 @@
+services:
+  plugin.manager.component:
+    class: Drupal\discovery_components\Plugin\ComponentManager
+    parent: default_plugin_manager

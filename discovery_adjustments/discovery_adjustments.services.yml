@@ -1,0 +1,12 @@
+services:
+  discovery_adjustments.diff_render:
+    class: Drupal\diff\Controller\NodeRevisionController
+    arguments: ['@diff.entity_comparison', '@plugin.manager.diff.layout', '@request_stack']
+  discovery_adjustments.video_manager:
+    class: Drupal\discovery_adjustments\VideoManager
+  discovery_adjustments.discovery_helper:
+    class: Drupal\discovery_adjustments\Utility\DiscoveryHelper
+  discovery_adjustments.on_response:
+    class: Drupal\discovery_adjustments\EventSubscriber\ResponseSubscriber
+    tags:
+      - { name: event_subscriber }

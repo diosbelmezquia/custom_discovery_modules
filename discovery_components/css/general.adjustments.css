@@ -1,0 +1,36 @@
+.layout-node-form .layout-region-node-main{
+  width: 100%;
+}
+
+.layout-node-form .layout-region-node-secondary {
+
+  right: 0px;
+  border: 2px solid #333333;
+
+}
+
+#more_options {
+  position: fixed;
+  bottom: 0px;
+  right: 0px;
+  z-index: 1000;
+  background-color: #333;
+  color: #bebebe;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+#more_options:hover {
+  text-decoration: none;
+  color: #fff;
+}
+
+#more_options:focus {
+  text-decoration: none;
+}
+
+#more_options:before {
+  background-image: url(../../../../core/themes/stable/images/core/icons/ffffff/hamburger.svg);
+}

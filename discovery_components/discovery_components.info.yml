@@ -1,0 +1,10 @@
+name: 'Discovery components'
+description: Config and setting for components for the discovery site.
+package: Discovery components
+
+type: module
+core: '8.x'
+
+dependencies:
+  - drupal:paragraphs
+  - drupal:serialization

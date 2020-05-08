@@ -1,0 +1,7 @@
+migrate_component:
+  path: '/admin/config/content/component'
+  defaults:
+    _form: '\Drupal\discovery_components\Form\MigrateComponentForm'
+    _title: 'Migrate component'
+  requirements:
+    _permission: 'admin migrate components'

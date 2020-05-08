@@ -1,0 +1,24 @@
+discovery_adjustments.node.diff:
+  path: '/node/{node}/diff'
+  defaults:
+    _title: 'Changes'
+    _controller: '\Drupal\discovery_adjustments\Controller\ContentChangeController::getNodesDiff'
+  requirements:
+    _access: 'TRUE'
+    node: \d+
+  options:
+    _node_operation_route: TRUE
+
+discovery_adjustments.get_image_media_autocomplete:
+  path: '/discovery_adjustments/get_image_media'
+  defaults:
+    _controller: '\Drupal\discovery_adjustments\Controller\ContentChangeController::getImgMediaAutocomplete'
+  requirements:
+    _access: 'TRUE'
+
+discovery_adjustments.get_node_data_autocomplete:
+  path: '/discovery_adjustments/get_node_data'
+  defaults:
+    _controller: '\Drupal\discovery_adjustments\Controller\ContentChangeController::getNodeData'
+  requirements:
+    _access: 'TRUE'

@@ -1,0 +1,16 @@
+gallery_region:
+  js:
+    js/gallery_region.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+
+discovery_modal:
+  css:
+    theme:
+      https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.css: { minified: true }
+  js:
+    https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.js: { minified: true }
+  dependencies:
+    - core/jquery
+    - core/drupal

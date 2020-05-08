@@ -1,0 +1,130 @@
+# Migracion para los carouseles.
+
+# Label/Titulo para el nuevo carousel.
+# label: 'Mi new label'
+
+# Campo de referencia a entidad del viejo contenido(*).
+# content: 'field_old_destacados'
+
+# Campo de referencia a entidad del viejo contenido programado.
+# scheduled_content: 'field_old_scheduled_content'
+
+# Campo con la fecha para el contenido programado.
+# scheduled_publication_date: '2019-11-15'
+
+# Mostrar carousel como: slider/carousel/grid.
+# display_as: 'slider'
+
+# El campo donde se va a crear el nuevo componente(*).
+# field_destination: 'field_xxx'
+
+home:
+  slider:
+    label: ''
+    content: 'field_populares'
+    scheduled_content: ''
+    scheduled_publication_date: ''
+    display_as: 'slider'
+    field_destination: 'field_slider_component'
+  cross_content:
+    label: 'More series'
+    content: 'field_cross_content'
+    scheduled_content: ''
+    scheduled_publication_date: ''
+    display_as: 'carousel'
+    field_destination: 'field_components'
+    cross_content: 1
+  destacados:
+    label: 'Highlighted'
+    content: 'field_destacados'
+    scheduled_content: ''
+    scheduled_publication_date: ''
+    display_as: 'carousel'
+    field_destination: 'field_components'
+    field_content_to_show: 'highlight'
+  recomendados:
+    label: 'Recommended'
+    content: 'field_recomendados'
+    scheduled_content: ''
+    scheduled_publication_date: ''
+    display_as: 'slider'
+    field_destination: 'field_components'
+    field_content_to_show: 'recommended'
+programa:
+  opening:
+    label: ''
+    content: 'field_panoramic_opening'
+    scheduled_content: ''
+    scheduled_publication_date: ''
+    display_as: 'slider'
+    field_destination: 'field_components'
+    field_show_content_from: 'id'
+  videos:
+    label: 'Videos'
+    content: 'field_videos'
+    scheduled_content: ''
+    scheduled_publication_date: ''
+    display_as: 'carousel'
+    field_destination: 'field_components'
+    field_show_content_from: 'id'
+  galeria_relacionadas:
+    label: 'Image Gallery'
+    content: 'field_related_galleries'
+    scheduled_content: ''
+    scheduled_publication_date: ''
+    display_as: 'carousel'
+    field_destination: 'field_components'
+    field_show_content_from: 'id'
+  contentido_relacionado:
+    label: 'Related content'
+    content: 'field_contenido_relacionado'
+    scheduled_content: ''
+    scheduled_publication_date: ''
+    display_as: 'carousel'
+    field_destination: 'field_components'
+    field_show_content_from: 'id'
+channel:
+  populares:
+    label: 'Popular'
+    content: 'field_populares'
+    scheduled_content: ''
+    scheduled_publication_date: ''
+    display_as: 'carousel'
+    field_destination: 'field_components'
+    field_show_content_from: 'id'
+    field_content_to_show: 'popular'
+  recomendados:
+    label: 'Recommended'
+    content: 'field_recomendados'
+    scheduled_content: ''
+    scheduled_publication_date: ''
+    display_as: 'slider'
+    field_destination: 'field_components'
+    field_show_content_from: 'id'
+    field_content_to_show: 'recommended'
+  cross_content:
+    label: 'More series'
+    content: 'field_cross_content'
+    scheduled_content: ''
+    scheduled_publication_date: ''
+    display_as: 'carousel'
+    cross_content: 1
+    field_destination: 'field_components'
+    field_show_content_from: 'id'
+  recent:
+    label: 'Recent'
+    content: 'field_recent'
+    scheduled_content: ''
+    scheduled_publication_date: ''
+    display_as: 'carousel'
+    field_destination: 'field_components'
+  articles_galleries:
+    label: 'Articles / Galleries'
+    content: 'field_recent'
+    scheduled_content: ''
+    scheduled_publication_date: ''
+    display_as: 'carousel'
+    field_destination: 'field_components'
+    field_show_content_of_type:
+      - 'article'
+      - 'galeria_de_imagenes'
